@@ -22,11 +22,11 @@ df = period_df[['candle_begin_time', 'open', 'high', 'low', 'close', 'volume']]
 df = df[df['candle_begin_time'] >= pd.to_datetime('2017-01-01')]
 # # 去掉index列
 df.reset_index(inplace=True, drop=True)
-# print(df.iloc[41723: 41730])
+# print(df)
 # exit()
 
-# =====产生交易信号：布林线策略
-# ===布林线策略
+# ======产生交易信号：布林线策略
+# ====布林线策略
 # 布林线中轨：n天收盘价的移动平均线
 # 布林线上轨：n天收盘价的移动平均线 + m * n天收盘价的标准差
 # 布林线上轨：n天收盘价的移动平均线 - m * n天收盘价的标准差
@@ -39,7 +39,7 @@ m = 2       # 系数
 
 # 计算中轨
 df['median'] = df['close'].rolling(n, min_periods=1).mean()
-# print(df.iloc[41509: 41529])
+# print(df.iloc[156: 180])
 # exit()
 # 计算标准差
 df['std'] = df['close'].rolling(n, min_periods=1).std(ddof=0)  # ddof 标准差自由度
@@ -55,6 +55,8 @@ condition1 = df['close'] > df['upper']
 condition2 = df['close'].shift(1) <= df['upper'].shift(1)
 # 将产生做多信号的那根K线的signal设置为1
 df.loc[condition1 & condition2, 'signal_long'] = 1
+# print(df.iloc[41607: 41636])
+# exit()
 
 # ====找出做多平仓的信号（K线下穿中轨的条件）
 # 当前K线的收盘价 < 中轨
@@ -76,18 +78,25 @@ df.loc[condition1 & condition2, 'signal_short'] = -1
 condition1 = df['close'] > df['median']
 condition2 = df['close'].shift(1) <= df['median'].shift(1)
 df.loc[condition1 & condition2, 'signal_short'] = 0
+# print(df.iloc[0: 42])
+# exit()
 
 ########################################
 # 去除信号组合的重复的情况（多少种组合）
 # df.drop_duplicates(subset=['signal_long', 'signal_short'], inplace=True)
+# print(df)
+# exit()
 ########################################
 
 # ====合并做多做空信号，去除重复信号
 df['signal'] = df[['signal_long', 'signal_short']].sum(axis=1)
-# print(df[['signal_long', 'signal_short', 'signal']].head(100))
+# print(df[['signal_long', 'signal_short', 'signal']].iloc[114: 143])
+# print(df.iloc[0: 40])
 # exit()
 
 temp = df[df['signal'].notnull()][['signal']]
+print(temp[temp['signal'] != 0])
+exit()
 temp = temp[temp['signal'] != temp['signal'].shift(1)]
 df['signal'] = temp['signal']
 # print(df[['candle_begin_time', 'signal']])
