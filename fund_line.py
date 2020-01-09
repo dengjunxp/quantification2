@@ -1,10 +1,14 @@
 # encoding=utf-8
-
+# 计算资金曲线
 import pandas as pd
+pd.set_option('expand_frame_repr', False)
+pd.set_option('display.max_rows', 1500)
+pd.set_option('display.min_rows', 1500)
 
 df = pd.read_hdf('output/eth_bolling_signal.h5', key='all_data')
 # df = pd.read_hdf('data/eth/lesson/eth_bolling_signal.h5', key='all_data')
-# pd.set_option('display.max_rows', 100)
+# print(df)
+# exit()
 
 # ========根据pos计算资金曲线
 # 根据收盘价计算涨跌幅
@@ -15,14 +19,16 @@ df['buy_at_open_change'] = df['close'] / df['open'] - 1
 df['sell_next_open_change'] = df['open'].shift(-1) / df['close'] - 1
 # 最后一根K线的sell_next_open_change补全为0
 df.at[len(df) - 1, 'sell_next_open_change'] = 0
+# print(df)
+# exit()
 
 # ====选取时间段
 df = df[df['candle_begin_time'] >= pd.to_datetime('2017-01-01')]
 df.reset_index(inplace=True, drop=True)
 
-print(df[['candle_begin_time', 'pos']])
+# print(df[['candle_begin_time', 'pos']])
 # print(df)
-exit()
+# exit()
 
 ######################### 计算资金曲线 #########################
 # ====选取开仓
@@ -41,6 +47,8 @@ df.loc[open_pos_condition, 'start_time'] = df['candle_begin_time']
 df['start_time'].fillna(method='ffill', inplace=True)
 # 空仓的行，设置成空 pd.NaT
 df.loc[df['pos'] == 0, 'start_time'] = pd.NaT
+# print(df[['candle_begin_time', 'pos', 'start_time']])
+# exit()
 
 # ====基本参数
 leverage_rate = 3       # bfx交易所最多提供3倍杠杆，leverage_rate可以在(0, 3]区间选择
@@ -51,10 +59,10 @@ min_margin = init_cash * leverage_rate * min_margin_rate    # 最低保证金
 
 # ====计算仓位变动
 # 开仓时仓位的变动
-# 建仓后的仓位
+# 建仓后的仓位（每一个初始资金都是300）
 df.loc[open_pos_condition, 'position'] = init_cash * leverage_rate * (1 + df['buy_at_open_change'])
 
-# print(df[['candle_begin_time', 'pos', 'open', 'close', 'start_time', 'position']])
+# print(df[['candle_begin_time', 'pos', 'open', 'close', 'start_time', 'buy_at_open_change', 'position']])
 # exit()
 
 # 开仓后每天的仓位的变动
@@ -62,7 +70,6 @@ group_num = len(df.groupby('start_time'))
 if group_num > 1:
     # 分组的每个close / 分组的第一行的close
     t = df.groupby('start_time').apply(lambda x: x['close'] / x.iloc[0]['close'] * x.iloc[0]['position'])
-
     # 把位置为0的索引去掉
     t = t.reset_index(level=[0])
     df['position'] = t['close']
@@ -70,7 +77,7 @@ if group_num > 1:
 #     t = df.groupby('start_time')[['close', 'position']].apply(lambda x: x['close'] / x.iloc[0]['close'] * x.iloc[0]['position'])
 #     df['position'] = t.T.iloc[:, 0]
 
-# 每根K线仓位的最大值和最小值，针对最高价和最低价
+# 每根K线仓位的最大值和最小值，针对最高价和最低价（用于计算是否爆仓）
 df['position_max'] = df['position'] * df['high'] / df['close']
 df['position_min'] = df['position'] * df['low'] / df['close']
 # print(t.head(10))

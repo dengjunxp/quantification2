@@ -1,9 +1,11 @@
 # encoding=utf-8
 # 布林线择时策略
 import pandas as pd
+pd.set_option('expand_frame_repr', False)
+pd.set_option('display.max_rows', 1000)
+pd.set_option('display.min_rows', 1000)
 
 df = pd.read_hdf('data/eth/eth_1min_data.h5', key='all_data')
-# pd.set_option('display.max_rows', None)
 
 # 转换15分钟数据
 rule_type = '15T'
