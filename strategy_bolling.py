@@ -3,7 +3,7 @@
 import pandas as pd
 
 df = pd.read_hdf('data/eth/eth_1min_data.h5', key='all_data')
-pd.set_option('display.max_rows', None)
+# pd.set_option('display.max_rows', None)
 
 # 转换15分钟数据
 rule_type = '15T'
@@ -19,9 +19,9 @@ period_df = period_df[period_df['volume'] > 0]
 period_df.reset_index(inplace=True)
 df = period_df[['candle_begin_time', 'open', 'high', 'low', 'close', 'volume']]
 # # 筛选时间
-df = df[df['candle_begin_time'] >= pd.to_datetime('2017-01-01')]
+# df = df[df['candle_begin_time'] >= pd.to_datetime('2017-01-01')]
 # # 去掉index列
-df.reset_index(inplace=True, drop=True)
+# df.reset_index(inplace=True, drop=True)
 # print(df)
 # exit()
 
@@ -89,15 +89,21 @@ df.loc[condition1 & condition2, 'signal_short'] = 0
 ########################################
 
 # ====合并做多做空信号，去除重复信号
-df['signal'] = df[['signal_long', 'signal_short']].sum(axis=1)
-# print(df[['signal_long', 'signal_short', 'signal']].iloc[114: 143])
+# df['signal'] = df[['signal_long', 'signal_short']].sum(axis=1)
+# 如果pandas版本最新，使用下面代码和视频保持一致。
+# min_count的意思是指定 NaN 个最少个数为1 超过1个NaN 就不计算 所以不会出现0.0
+df['signal'] = df[['signal_long', 'signal_short']].sum(axis=1, min_count=1, skipna=True)
+
+# print(df[['signal_long', 'signal_short', 'signal']].iloc[0:10])
 # print(df.iloc[0: 40])
 # exit()
 
 temp = df[df['signal'].notnull()][['signal']]
-print(temp[temp['signal'] != 0])
-exit()
+# print(temp.iloc[0: 10])
+
 temp = temp[temp['signal'] != temp['signal'].shift(1)]
+# print(temp.iloc[0: 10])
+# exit()
 df['signal'] = temp['signal']
 # print(df[['candle_begin_time', 'signal']])
 # exit()
