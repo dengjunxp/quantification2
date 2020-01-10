@@ -62,16 +62,22 @@ min_margin = init_cash * leverage_rate * min_margin_rate    # 最低保证金
 # 建仓后的仓位（每一个初始资金都是300）
 df.loc[open_pos_condition, 'position'] = init_cash * leverage_rate * (1 + df['buy_at_open_change'])
 
-# print(df[['candle_begin_time', 'pos', 'open', 'close', 'start_time', 'buy_at_open_change', 'position']])
+# print(df[['candle_begin_time', 'pos', 'open', 'close', 'start_time', 'buy_at_open_change', 'position']].head(10))
+# print(df.head(20))
 # exit()
 
 # 开仓后每天的仓位的变动
 group_num = len(df.groupby('start_time'))
 if group_num > 1:
-    # 分组的每个close / 分组的第一行的close
+    # [to review]
     t = df.groupby('start_time').apply(lambda x: x['close'] / x.iloc[0]['close'] * x.iloc[0]['position'])
+
+    # for name, group in df.groupby('start_time'):
+    #     print(name)
+    #     print(group)
     # 把位置为0的索引去掉
     t = t.reset_index(level=[0])
+
     df['position'] = t['close']
 # elif group_num == 1:
 #     t = df.groupby('start_time')[['close', 'position']].apply(lambda x: x['close'] / x.iloc[0]['close'] * x.iloc[0]['position'])
@@ -84,18 +90,23 @@ df['position_min'] = df['position'] * df['low'] / df['close']
 # print(df[['candle_begin_time', 'pos', 'start_time', 'position', 'position_max', 'position_min']])
 # exit()
 
-# 平仓时仓位
+# 计算实际卖出的仓位【position】（当前平仓信号的K线[position] x 下一条K线开盘价的比率[sell_next_open_change]）
 df.loc[close_pos_condition, 'position'] *= (1 + df.loc[close_pos_condition, 'sell_next_open_change'])
-
+# 仓位（position）计算
+# the end
 
 # ====计算每天实际持有资金的变化
 # 计算持仓利润
 df['profit'] = (df['position'] - init_cash * leverage_rate) * df['pos']  # 持仓盈利或者损失
 # print(df[['candle_begin_time', 'pos', 'start_time', 'position', 'profit']])
 # exit()
+
 # 计算持仓利润最小值
-df.loc[df['pos'] == 1, 'profit_min'] = (df['position_min'] - init_cash * leverage_rate) * df['pos']  # 最小持仓盈利或者损失
-df.loc[df['pos'] == -1, 'profit_min'] = (df['position_max'] - init_cash * leverage_rate) * df['pos']  # 最小持仓盈利或者损失
+####################
+# 最小持仓盈利或者损失
+df.loc[df['pos'] == 1, 'profit_min'] = (df['position_min'] - init_cash * leverage_rate) * df['pos']
+# 最小持仓盈利或者损失
+df.loc[df['pos'] == -1, 'profit_min'] = (df['position_max'] - init_cash * leverage_rate) * df['pos']
 # print(df[['candle_begin_time', 'pos', 'start_time', 'position', 'profit', 'profit_min']])
 # exit()
 
