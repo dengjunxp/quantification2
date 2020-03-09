@@ -1,5 +1,6 @@
 # encoding=utf-8
 # 布林线择时策略
+
 import pandas as pd
 pd.set_option('expand_frame_repr', False)
 pd.set_option('display.max_rows', 1000)
@@ -90,8 +91,10 @@ df.loc[condition1 & condition2, 'signal_short'] = 0
 # exit()
 ########################################
 
-# ====合并做多做空信号，去除重复信号
+
+# ==== 步骤1：合并做多做空信号
 # df['signal'] = df[['signal_long', 'signal_short']].sum(axis=1)
+############################## important ###############################
 # 如果pandas版本最新，使用下面代码和视频保持一致。
 # min_count的意思是指定 NaN 个最少个数为1 超过1个NaN 就不计算 所以不会出现0.0
 df['signal'] = df[['signal_long', 'signal_short']].sum(axis=1, min_count=1, skipna=True)
@@ -100,12 +103,16 @@ df['signal'] = df[['signal_long', 'signal_short']].sum(axis=1, min_count=1, skip
 # print(df.iloc[0: 40])
 # exit()
 
+
+# ==== 步骤2：去除重复信号
+# 找出所有非空的signal信号
 temp = df[df['signal'].notnull()][['signal']]
 # print(temp.iloc[0: 10])
-
+# 找出和上一行数据不一样的signal信号
 temp = temp[temp['signal'] != temp['signal'].shift(1)]
 # print(temp.iloc[0: 10])
 # exit()
+# 将去除重复后的signal信号复制回去
 df['signal'] = temp['signal']
 # print(df[['candle_begin_time', 'signal']])
 # exit()
@@ -116,8 +123,10 @@ df.drop(['median', 'std', 'upper', 'lower', 'signal_long', 'signal_short'], axis
 # ====由signal计算出实际每天持有的仓位
 # signal的计算运用了收盘价，是每根K线收盘之后产生的信号，到第二根开盘的时候才买入，仓位才会改变。
 df['pos'] = df['signal'].shift()
+# 向下（时间的前进方向）补全pos
 df['pos'].fillna(method='ffill', inplace=True)
-df['pos'].fillna(value=0, inplace=True)     # 将初始行数的position补全为0
+# 将初始行数的pos补全为0
+df['pos'].fillna(value=0, inplace=True)
 
 # print(df)
 

@@ -1,48 +1,59 @@
 # encoding=utf-8
+# 计算资金曲线
 
 import pandas as pd
-pd.set_option('expand_frame_repr', False)  # 当列太多时不换行
-pd.set_option('display.max_rows', 1500)
-
+# 不换行显示
+pd.set_option('expand_frame_repr', False)
+pd.set_option('display.max_rows', 100)
+pd.set_option('display.min_rows', 100)
+# pd.set_option('display.max_rows', None)
 
 # =====导入数据
 df = pd.read_hdf('data\h5\eth_bolling_signal.h5', key='all_data')
 
-
-# =====根据pos计算资金曲线
-# ===计算涨跌幅
-df['change'] = df['close'].pct_change(1)  # 根据收盘价计算涨跌幅
-df['buy_at_open_change'] = df['close'] / df['open'] - 1  # 从今天开盘买入，到今天收盘的涨跌幅
-df['sell_next_open_change'] = df['open'].shift(-1) / df['close'] - 1  # 从今天收盘到明天开盘的涨跌幅
+# ==== 【准备操作】 ==== #
+# ==== 根据pos计算资金曲线
+# ==== 计算涨跌幅
+# 根据收盘价计算涨跌幅（标准涨跌幅）
+df['change'] = df['close'].pct_change(1)
+# 从今天开盘买入，到今天收盘的涨跌幅（建仓买入时，使用的涨跌幅）
+df['buy_at_open_change'] = df['close'] / df['open'] - 1
+# 从今天收盘到明天开盘的涨跌幅（平仓时，使用的涨跌幅）
+df['sell_next_open_change'] = df['open'].shift(-1) / df['close'] - 1
 # sell_next_open_change最后一条数据补全为零，可视为下一K线的开盘价和上一K线的收盘价相同
 df.at[len(df) - 1, 'sell_next_open_change'] = 0
 
 
-# ===选取时间段
+# ==== 选取时间段
 df = df[df['candle_begin_time'] >= pd.to_datetime('2017-01-01')]
+# 重新设置索引
 df.reset_index(inplace=True, drop=True)
 
-print(df[['candle_begin_time', 'pos']])
-exit(1)
+# print(df[['candle_begin_time', 'pos']])
+# exit()
 
-# ===选取开仓、平仓条件
-# 选取pos非零值
+# ==== 选取开仓、平仓的条件
+# 开仓的条件
 condition1 = df['pos'] != 0
 # 选取下一个pos值不同的行
 condition2 = df['pos'] != df['pos'].shift(1)
 open_pos_condition = condition1 & condition2
 
+# 平仓的条件
 condition1 = df['pos'] != 0
 condition2 = df['pos'] != df['pos'].shift(-1)
 close_pos_condition = condition1 & condition2
 
 
-# ====对每次交易进行分组
-# ====进一步规范数据格式
+# ==== 对每次交易进行分组
+# start_time 为开仓的行
 df.loc[open_pos_condition, 'start_time'] = df['candle_begin_time']
+# 向下补全（向时间前进的方向）
 df['start_time'].fillna(method='ffill', inplace=True)
+# 将pos=0（不持仓）的行，start_time设置为pd.NaT
 df.loc[df['pos'] == 0, 'start_time'] = pd.NaT
-
+# print(df[['candle_begin_time', 'pos', 'start_time']])
+# exit()
 
 # ===基本参数
 leverage_rate = 3  # bfx交易所最多提供3倍杠杆，leverage_rate可以在(0, 3]区间选择
