@@ -106,7 +106,7 @@ df.loc[close_pos_condition, 'cash'] -= df.loc[close_pos_condition, 'position'] *
 # 如果存在df['cash_min'] <= min_margin的
 _index = df[df['cash_min'] <= min_margin].index
 if len(_index) > 0:
-    print('有爆仓')
+    print('有爆仓 X %s' % len(_index))
     df.loc[_index, '强平'] = 1
     # 在持仓分组内，将强平余下的行也设置为1，因为已经没有用
     df['强平'] = df.groupby('start_time')['强平'].fillna(method='ffill')
